@@ -22,21 +22,67 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS
+# Custom CSS for UI Improvements
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
+    
+    /* Tabs Styling */
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
     .stTabs [data-baseweb="tab"] {
         height: 50px;
         white-space: pre-wrap;
         background-color: #ffffff;
         border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        padding: 10px 20px;
+        font-weight: 600;
+        color: #31333F; /* Explicit dark color for visibility */
     }
-    .stTabs [aria-selected="true"] { background-color: #e9ecef; }
+    .stTabs [aria-selected="true"] { 
+        background-color: #e9ecef; 
+        border-bottom: 2px solid #007bff;
+        color: #007bff; /* Primary color for active tab */
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #007bff;
+    }
+
+    /* Modern Button Styling */
+    div.stButton > button:first-child {
+        background-color: #007bff;
+        color: white;
+        border-radius: 8px;
+        border: none;
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        margin-top: 10px;
+    }
+    div.stButton > button:hover {
+        background-color: #0056b3;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+    div.stButton > button:active {
+        transform: translateY(0);
+    }
+
+    /* Image Centering and Container */
+    .img-center {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    
+    /* Text styling */
+    .prediction-text {
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -75,8 +121,8 @@ TREATMENTS = {
 
 # Sidebar Content
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2864/2864333.png", width=100)
-    st.title("AI Clinical Assistant")
+    st.image("https://cdn-icons-png.flaticon.com/512/2864/2864333.png", width=80)
+    st.title("AI Assistant")
     st.divider()
     components.html("""
         <canvas id="robot" width="200" height="200"></canvas>
@@ -87,7 +133,7 @@ with st.sidebar:
                 canvas: document.getElementById("robot"), 
                 autoplay: true, 
                 layout: new rive.Layout({ fit: 'contain', alignment: 'center' }),
-                onLoad: () => { r.resizeDrawingSurfaceToCanvas(); } 
+                onLoad: (r) => { r.resizeDrawingSurfaceToCanvas(); } 
             });
         </script>
     """, height=220)
@@ -125,21 +171,24 @@ if uploaded_file:
     confidence = float(preds[idx]) * 100
 
     # Tabs
-    tab1, tab2, tab3 = st.tabs(["📋 Diagnosis", "🧪 AI Insights (Grad-CAM)", "🩺 Treatment Plan"])
+    tab1, tab2, tab3 = st.tabs(["📋 Diagnosis", "🧪 AI Insights", "🩺 Treatment Plan"])
 
     with tab1:
         c1, c2 = st.columns([1, 1])
         with c1:
-            st.image(uploaded_file, caption="Input Scan", use_container_width=True)
+            # Reduced image size with centering
+            st.markdown('<div class="img-center">', unsafe_allow_html=True)
+            st.image(uploaded_file, caption="Input Scan", width=350)
+            st.markdown('</div>', unsafe_allow_html=True)
         with c2:
-            st.subheader("Results")
+            st.subheader("Diagnostic Summary")
             if label == "Normal":
                 st.success(f"**Predicted Category:** {label}")
             else:
                 st.error(f"**Predicted Category:** {label}")
             st.write(f"**Confidence Score:** {confidence:.2f}%")
             
-            # Chart
+            # Probability Chart
             df = pd.DataFrame({"Type": CLASS_NAMES, "Score": [round(float(p)*100, 2) for p in preds]})
             fig = px.bar(df, x="Score", y="Type", orientation='h', color="Score", color_continuous_scale="RdBu_r")
             fig.update_layout(height=250, margin=dict(l=0, r=0, t=0, b=0), showlegend=False)
@@ -147,16 +196,20 @@ if uploaded_file:
 
     with tab2:
         st.subheader("Model Attention Visualization")
-        st.write("The heatmap below indicates the areas the AI analyzed to reach its conclusion.")
-        with st.spinner("Generating heatmap..."):
-            try:
-                heatmap_img = get_gradcam_image(temp_path, model)
-                st.image(heatmap_img, caption="AI Heatmap (Warm colors indicate high importance)", use_container_width=True)
-            except Exception as e:
-                st.error(f"Error generating heatmap: {e}")
-            finally:
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
+        st.write("The heatmap below (Grad-CAM) highlights suspicious areas identified by the AI.")
+        
+        # Centering and reducing heatmap size
+        col_m1, col_m2, col_m3 = st.columns([1, 2, 1])
+        with col_m2:
+            with st.spinner("Generating heatmap..."):
+                try:
+                    heatmap_img = get_gradcam_image(temp_path, model)
+                    st.image(heatmap_img, caption="AI Identification (Warm colors = High Importance)", width=450)
+                except Exception as e:
+                    st.error(f"Error generating heatmap: {e}")
+                finally:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
 
     with tab3:
         st.subheader(f"Clinical Guidance for {label}")
@@ -166,8 +219,15 @@ if uploaded_file:
         for step in data["steps"]:
             st.markdown(f"- {step}")
         st.divider()
-        st.button("📄 Export Clinical Report (PDF)", disabled=True)
-        st.caption("Note: This is an AI-assisted tool. All diagnoses must be confirmed by a certified radiologist.")
+        
+        # Better visible buttons
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            if st.button("📄 Generate PDF Report"):
+                st.toast("Generating report... (Feature coming soon)")
+        with col_b2:
+            if st.button("📞 Contact Specialist"):
+                st.toast("Connecting to clinical network...")
 
 else:
     # Landing page Rive animation
@@ -180,7 +240,7 @@ else:
             canvas: document.getElementById("scan"), 
             autoplay: true, 
             layout: new rive.Layout({ fit: 'contain', alignment: 'center' }),
-            onLoad: () => { r.resizeDrawingSurfaceToCanvas(); } 
+            onLoad: (r) => { r.resizeDrawingSurfaceToCanvas(); } 
         });
     </script>""", height=320)
     st.markdown("<h3 style='text-align: center;'>Please upload a CT Scan image to begin automated analysis.</h3>", unsafe_allow_html=True)

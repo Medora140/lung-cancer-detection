@@ -1,0 +1,15 @@
+torch
+torchvision
+ultralytics
+opencv-python
+albumentations
+numpy
+pandas
+matplotlib
+scikit-learn
+tqdm
+Pillow
+tensorflow
+streamlit
+flask
+openai

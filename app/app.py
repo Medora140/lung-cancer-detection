@@ -148,10 +148,24 @@ def create_pdf_report(data):
     os.remove(heatmap_path)
     pdf.ln(5)
     
-    # Section 5: Disclaimer
+    # Section 5: Clinical Guidance & Next Steps
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, '5. Clinical Guidance & Next Steps', 0, 1, 'L', fill=True)
+    pdf.set_font('Arial', '', 10)
+    pdf.multi_cell(0, 8, f"Description: {data['description']}", 0, 'L')
+    pdf.ln(2)
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(0, 8, "Recommended Actions:", 0, 1)
+    pdf.set_font('Arial', '', 10)
+    for step in data['steps']:
+        pdf.cell(10) # Indent
+        pdf.cell(0, 8, f"- {step}", 0, 1)
+    pdf.ln(5)
+    
+    # Section 6: Disclaimer
     pdf.set_font('Arial', 'B', 12)
     pdf.set_text_color(200, 0, 0)
-    pdf.cell(0, 10, '5. Standard Medical Disclaimer', 0, 1, 'L', fill=True)
+    pdf.cell(0, 10, '6. Standard Medical Disclaimer', 0, 1, 'L', fill=True)
     pdf.set_font('Arial', 'I', 9)
     pdf.multi_cell(0, 5, "WARNING: This tool is for educational and clinical decision-support purposes only. It is NOT a substitute for professional medical advice, diagnosis, or treatment. All results must be reviewed and confirmed by a board-certified radiologist or qualified medical professional.", 0, 'L')
     
@@ -268,7 +282,9 @@ if uploaded_file:
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "prediction": label,
             "confidence": round(confidence, 2),
-            "heatmap": heatmap_img
+            "heatmap": heatmap_img,
+            "description": data_treat["description"],
+            "steps": data_treat["steps"]
         }
         
         pdf_bytes = create_pdf_report(report_data)
